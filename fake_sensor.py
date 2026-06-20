@@ -47,6 +47,6 @@ if __name__ == "__main__":
     try:
         for value in generate_readings():
             timestamp = datetime.now().strftime("%H:%M:%S")
-            print(f"{timestamp} TEMP:{value}")
+            print(f"{timestamp} TEMP:{value}", flush=True)
     except KeyboardInterrupt:
         print("\nStopped.")
