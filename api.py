@@ -1,7 +1,16 @@
 from fastapi import FastAPI
 import sqlite3
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+#The "*" means "allow everything" — fine for local dev
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 dataBase = "tempdata.db"
 
 @app.get("/readings")

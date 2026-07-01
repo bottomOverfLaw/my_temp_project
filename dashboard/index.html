@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <title>Document</title>
+</head>
+<body>
+    <h1>Dash board</h1>
+
+    <div>
+        <canvas id="tempChart"></canvas>
+    </div>
+
+
+    <script>
+        const ctx = document.getElementById("tempChart").getContext("2d");
+
+        //get the data form the api
+        fetch("http://127.0.0.1:8000/readings")
+        .then(response => response.json())
+        .then(data => {
+            //creating the chart
+            const chart = new Chart(ctx, {
+                type: "bubble",
+                data: {
+                    datasets: [{
+                        label: "Temperature (°C)",
+                        data: data.map(row => ({
+                            x: new Date(row.timestamp).getTime(), 
+                            y: row.temperature,
+                            r: 4
+                        }))
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            type: "time",
+                            time: {
+                                displayFormats: {
+                                    second: "HH:mm:ss"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
