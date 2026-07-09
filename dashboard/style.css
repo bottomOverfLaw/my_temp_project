@@ -1,0 +1,60 @@
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+        background: #0d1117;
+        color: #e6edf3;
+        font-family: 'Inter', sans-serif;
+        padding: 2rem;
+    }
+
+    h1 {
+        font-size: 1.2rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: #00c8ff;
+        margin-bottom: 1.5rem;
+    }
+
+    .cards {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .card {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 1.2rem 1.5rem;
+        flex: 1;
+    }
+
+    .card-label {
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #8b949e;
+        margin-bottom: 0.5rem;
+    }
+
+    .card-value {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 2rem;
+        font-weight: 600;
+        color: #e6edf3;
+    }
+
+    .card-trend {
+        font-size: 0.85rem;
+        margin-top: 0.3rem;
+    }
+
+    .trend-up { color: #f85149; }
+    .trend-down { color: #3fb950; }
+
+    .chart-container {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 1.5rem;
+    }
