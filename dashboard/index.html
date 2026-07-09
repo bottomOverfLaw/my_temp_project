@@ -5,14 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="stylesheet" href="style.css">
     <title>Document</title>
 </head>
 <body>
-    <h1>Dash board</h1>
+    <h1>Temperature Monitor</h1>
 
-    <div>
-        <canvas id="tempChart"></canvas>
+<div class="cards">
+    <div class="card">
+        <div class="card-label">Current</div>
+        <div class="card-value" id="val-current">--</div>
+        <div class="card-trend" id="trend-current"></div>
     </div>
+    <div class="card">
+        <div class="card-label">Average (2h)</div>
+        <div class="card-value" id="val-avg">--</div>
+    </div>
+    <div class="card">
+        <div class="card-label">Min (2h)</div>
+        <div class="card-value" id="val-min">--</div>
+    </div>
+    <div class="card">
+        <div class="card-label">Max (2h)</div>
+        <div class="card-value" id="val-max">--</div>
+    </div>
+</div>
+
+<div class="chart-container">
+    <canvas id="tempChart"></canvas>
+</div>
 
 
     <script>
@@ -22,28 +43,80 @@
         fetch("http://127.0.0.1:8000/readings")
         .then(response => response.json())
         .then(data => {
+            //filtering the last 2h
+            const latest = new Date(data[data.length - 1].timestamp).getTime();
+            const twoHours = 2 * 60 * 60 * 1000;  // 7,200,000 milliseconds
+            const cutoff = latest - twoHours;
+            const recent = data.filter(row => new Date(row.timestamp).getTime() >= cutoff);
+            
+            // card values
+            const temps = recent.map(row => row.temperature);
+            const current = temps[temps.length - 1];
+            const avg = temps.reduce((sum, t) => sum + t, 0) / temps.length;
+            const min = Math.min(...temps);
+            const max = Math.max(...temps);
+
+            // trend — compare last reading to 10 readings ago
+            const prev = temps[temps.length - 10] ?? temps[0];
+            const trendEl = document.getElementById("trend-current");
+            if (current > prev) {
+                trendEl.textContent = "▲ Rising";
+                trendEl.className = "card-trend trend-up";
+            } else if (current < prev) {
+                trendEl.textContent = "▼ Falling";
+                trendEl.className = "card-trend trend-down";
+            } else {
+                trendEl.textContent = "— Stable";
+                trendEl.className = "card-trend";
+            }
+
+            // update card values
+            document.getElementById("val-current").textContent = current.toFixed(1) + " °C";
+            document.getElementById("val-avg").textContent = avg.toFixed(1) + " °C";
+            document.getElementById("val-min").textContent = min.toFixed(1) + " °C";
+            document.getElementById("val-max").textContent = max.toFixed(1) + " °C";
+
+            //averaging 5min to have less data on the chart
+            const buckets = {};
+            recent.forEach(row => {
+                const t = new Date(row.timestamp).getTime();
+                const bucket = Math.floor(t / (5 * 60 * 1000)) * (5 * 60 * 1000);
+                if (!buckets[bucket]) buckets[bucket] = [];
+                buckets[bucket].push(row.temperature);
+            });
+            const averaged = Object.entries(buckets).map(([time, temps]) => ({
+                x: Number(time),
+                y: temps.reduce((sum, t) => sum + t, 0) / temps.length,
+                r: 4
+            }));
+
             //creating the chart
             const chart = new Chart(ctx, {
-                type: "bubble",
+                type: "line",
                 data: {
                     datasets: [{
                         label: "Temperature (°C)",
-                        data: data.map(row => ({
-                            x: new Date(row.timestamp).getTime(), 
-                            y: row.temperature,
-                            r: 4
-                        }))
+                        data: averaged.map(point => ({ x: point.x, y: point.y })),
+                        borderColor: "#00c8ff",
+                        backgroundColor: "rgba(0, 200, 255, 0.1)",
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.3,
+                        fill: true,
                     }]
-                },
+                },   
                 options: {
+                    plugins: { legend: { labels: { color: "#8b949e" } } },
                     scales: {
                         x: {
                             type: "time",
-                            time: {
-                                displayFormats: {
-                                    second: "HH:mm:ss"
-                                }
-                            }
+                            time: { displayFormats: { minute: "HH:mm" } },
+                            ticks: { color: "#8b949e" },
+                            grid: { color: "#21262d" }
+                        },
+                        y: {
+                            ticks: { color: "#8b949e", callback: v => v + " °C" },
+                            grid: { color: "#21262d" }
                         }
                     }
                 }
