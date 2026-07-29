@@ -1,0 +1,2 @@
+../Core/Src/usart.c:8:6:USART3_Init	4	static
+../Core/Src/usart.c:39:6:UART_SendString	16	static

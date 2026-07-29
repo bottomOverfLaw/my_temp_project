@@ -1,0 +1,2 @@
+../Core/Src/dac.c:7:6:DAC_Init	4	static
+../Core/Src/dac.c:29:6:DAC_SetOutput	16	static

@@ -97,8 +97,8 @@
                     datasets: [{
                         label: "Temperature (°C)",
                         data: averaged.map(point => ({ x: point.x, y: point.y })),
-                        borderColor: "#00c8ff",
-                        backgroundColor: "rgba(0, 200, 255, 0.1)",
+                        borderColor: "#fd97f6",
+                        backgroundColor: "rgba(253, 151, 246, 0.1)",
                         borderWidth: 2,
                         pointRadius: 0,
                         tension: 0.3,
@@ -106,16 +106,22 @@
                     }]
                 },   
                 options: {
-                    plugins: { legend: { labels: { color: "#8b949e" } } },
+                    plugins: { legend: { labels: { color: "#fd97f6" } } },
                     scales: {
                         x: {
                             type: "time",
-                            time: { displayFormats: { minute: "HH:mm" } },
+                            time: {
+                                    displayFormats: {
+                                        second: "HH:mm",
+                                        minute: "HH:mm",
+                                        hour: "HH:mm"
+                                    }
+                                },
                             ticks: { color: "#8b949e" },
                             grid: { color: "#21262d" }
                         },
                         y: {
-                            ticks: { color: "#8b949e", callback: v => v + " °C" },
+                            ticks: { color: "#8b949e", callback: v => v.toFixed(1) + " °C" },
                             grid: { color: "#21262d" }
                         }
                     }

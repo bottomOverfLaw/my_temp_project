@@ -23,7 +23,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "gpio.h"
+#include "usart.h"
+#include "dac.h"
+#include "adc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,6 +62,7 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
 uint32_t read_temp;
+uint16_t dac_value;
 char buffer[50];
 float temperature;
 float v_sense;
@@ -67,7 +71,6 @@ float v_sense;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
 static void MX_ETH_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
@@ -78,14 +81,7 @@ static void MX_USB_OTG_FS_PCD_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void UART_SendString(char *str){
-	while (*str){
-		while(!(USART3->SR & USART_SR_TXE));
 
-		USART3->DR = *str;
-		str++;
-	}
-}
 /* USER CODE END 0 */
 
 /**
@@ -116,35 +112,16 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init();
   MX_ETH_Init();
   MX_TIM2_Init();
   MX_USB_OTG_FS_PCD_Init();
 
   /* USER CODE BEGIN 2 */
-  RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN;
-  GPIOD->MODER &= ~((0x3 << (8*2)) | (0x3 << (9*2)));
-  GPIOD->MODER |=  ((0x2 << (8*2)) | (0x2 << (9*2)));
+  GPIO_Init();
+  ADC_Init();
+  USART3_Init();
+  DAC_Init();
 
-  GPIOD->AFR[1] &= ~((0xF << (0*4)) | (0xF << (1*4))); /* 0xF = 1111 -> that is equal to what 0x3 do*/
-  GPIOD->AFR[1] |=  ((0x7 << (0*4)) | (0x7 << (1*4))); /* 0x7 = 0111*/
-
-  RCC->APB1ENR |= RCC_APB1ENR_USART3EN;
-
-  USART3->CR1 &= ~USART_CR1_UE;
-  USART3->BRR = (22 << 4) | 13;
-  USART3->CR1 |= USART_CR1_UE | USART_CR1_TE | USART_CR1_RE; /* UE = enable, TE = Transmitter Enable, RE = Receiver enable*/
-
-
-  RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOBEN);
-  GPIOB->MODER &= ~(0x3 << (0*2));
-  GPIOB->MODER |= (0x1 << (0*2));
-
-  RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
-  ADC->CCR |= ADC_CCR_TSVREFE;
-  ADC1->SMPR1 |= (0x7 << 24);
-  ADC1->SQR3 |= (18 << 0);
-  ADC1->CR2 |= ADC_CR2_ADON;
   for (volatile int i = 0; i < 1000; i++); // brief stabilization delay
   /* USER CODE END 2 */
 
@@ -157,26 +134,19 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	  GPIOB->ODR ^= (1 << 0);
 
-	  ADC1->CR2 |= ADC_CR2_SWSTART;
-	  while(!(ADC1->SR & ADC_SR_EOC));
-	  read_temp = ADC1->DR;
+	  read_temp = ADC_ReadRaw();
 	  v_sense = (read_temp/4095.0f) * 3.3f; //transforming the raw value into a voltage number
+	  // TODO: replace with TS_CAL1/TS_CAL2 factory value
 	  temperature = ((v_sense - 0.76f) / 0.0025f) + 25.0f; //from the voltage get the temperature
+	  //TODO: improve the calculation, in case it get over 45 or under 15
+	  dac_value = (uint16_t)(((temperature - 15.0f) / (45.0f - 15.0f))*4095.0f);
 
+	  DAC_SetOutput(dac_value);
 	  sprintf(buffer, "TEMP: %f\r\n", temperature);
 	  UART_SendString(buffer);
 
 	  for (volatile int i = 0; i < 1000000; i++);
 
-	  /*HAL_ADC_Start(&hadc1);
-	  HAL_ADC_PollForConversion(&hadc1, 100);
-
-	 	 output a uint32 value
-
-	  sprintf(buffer, "TEMP: %f\r\n", temperature); format to string
-	  HAL_UART_Transmit(&huart3, (uint8_t*)buffer, strlen(buffer), 100);
-
-	  HAL_Delay(1000);*/
 
   }
   /* USER CODE END 3 */
@@ -232,52 +202,6 @@ void SystemClock_Config(void)
   * @param None
   * @retval None
   */
-static void MX_ADC1_Init(void)
-{
-
-  /* USER CODE BEGIN ADC1_Init 0 */
-
-  /* USER CODE END ADC1_Init 0 */
-
-  ADC_ChannelConfTypeDef sConfig = {0};
-
-  /* USER CODE BEGIN ADC1_Init 1 */
-
-  /* USER CODE END ADC1_Init 1 */
-
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
-  */
-  hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
-  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc1.Init.ScanConvMode = DISABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
-  hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
-  hadc1.Init.DMAContinuousRequests = DISABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
-  if (HAL_ADC_Init(&hadc1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN ADC1_Init 2 */
-
-  /* USER CODE END ADC1_Init 2 */
-
-}
 
 /**
   * @brief ETH Initialization Function
@@ -415,62 +339,6 @@ static void MX_USB_OTG_FS_PCD_Init(void)
 
 }
 
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-  /* USER CODE BEGIN MX_GPIO_Init_1 */
-
-  /* USER CODE END MX_GPIO_Init_1 */
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOG_CLK_ENABLE();
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LD1_Pin|LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(USB_PowerSwitchOn_GPIO_Port, USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin : USER_Btn_Pin */
-  GPIO_InitStruct.Pin = USER_Btn_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(USER_Btn_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : LD1_Pin LD3_Pin LD2_Pin */
-  GPIO_InitStruct.Pin = LD1_Pin|LD3_Pin|LD2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : USB_PowerSwitchOn_Pin */
-  GPIO_InitStruct.Pin = USB_PowerSwitchOn_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(USB_PowerSwitchOn_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : USB_OverCurrent_Pin */
-  GPIO_InitStruct.Pin = USB_OverCurrent_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(USB_OverCurrent_GPIO_Port, &GPIO_InitStruct);
-
-  /* USER CODE BEGIN MX_GPIO_Init_2 */
-
-  /* USER CODE END MX_GPIO_Init_2 */
-}
 
 /* USER CODE BEGIN 4 */
 

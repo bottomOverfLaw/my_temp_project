@@ -1,0 +1,2 @@
+../Core/Src/usart.c:8:6:USART3_Init	1
+../Core/Src/usart.c:39:6:UART_SendString	3
