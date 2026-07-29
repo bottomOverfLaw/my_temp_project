@@ -1,3 +1,6 @@
 .vscode/
 __pycache__/
 *.pyc
+Dev_project/Debug/
+.db
+*.png

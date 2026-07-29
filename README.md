@@ -4,7 +4,7 @@ A full-stack embedded systems project: reading a live temperature sensor on an S
 
 Built as a portfolio project to demonstrate the complete path from hardware register writes to a browser-rendered chart — firmware, serial communication, data storage, REST API, and frontend visualization.
 
-![Dashboard Screenshot](docs/dashboard-screenshot.png)
+![Dashboard Screenshot](dashboard-screenshot.png)
 
 ## Overview
 
